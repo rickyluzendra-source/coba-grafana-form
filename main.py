@@ -46,7 +46,7 @@ async def download_all(payload: dict = None):
 
     # --- SHEET 2: HASIL KALKULASI (Rumus Excel untuk Semua Baris) ---
     ws_calc = wb.create_sheet(title="Hasil Kalkulasi")
-    ws_calc.append(["ID", "Unit Bisnis", "Gross Revenue", "Total Direct Cost", "Tax (10%)", "Net Profit", "Margin %"])
+    ws_calc.append(["ID", "Unit Bisnis", "Gross Revenue", "Total Direct Cost", "Tax (11%)", "Net Profit", "Margin %"])
     
     tax_rate = 0.11
     total_rows = len(database_penampung)
@@ -61,6 +61,13 @@ async def download_all(payload: dict = None):
             f"=C{r}-D{r}-E{r}",                        # Net Profit
             f"=F{r}/C{r}"                               # Margin
         ])
+        # FORMATTING SEL AGAR TIDAK SALAH FORMAT (%)
+        ws_calc[f"C{r}"].number_format = '#,##0'  # Revenue (Rupiah)
+        ws_calc[f"D{r}"].number_format = '#,##0'  # Direct Cost (Rupiah)
+        ws_calc[f"E{r}"].number_format = '#,##0'  # Tax (Rupiah) -> BUKAN PERCENTAGE
+        ws_calc[f"F{r}"].number_format = '#,##0'  # Net Profit (Rupiah)
+        ws_calc[f"G{r}"].number_format = '0.0%'   # Margin (Persentase)
+        
         
     # Baris Total di Paling Bawah
     tot_row = total_rows + 2
