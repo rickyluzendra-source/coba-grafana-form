@@ -104,6 +104,21 @@ async def download_all(payload: dict = None):
         cell_margin.font = bold_font
 
     output = BytesIO()
+    
+    # AUTO-FIT LEBAR KOLOM (MENCEGAH TAMPILAN #####)
+    for ws in [ws_master, ws_calc]:
+        for col in ws.columns:
+            max_len = 0
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            for cell in col:
+                val = str(cell.value or '')
+                # Memberi estimasi lebar jika sel berisi angka berformat/rumus
+                if cell.number_format and cell.number_format != 'General':
+                    max_len = max(max_len, len(val) + 8)
+                else:
+                    max_len = max(max_len, len(val))
+            # Set lebar kolom dengan nilai minimal 15 agar rapi
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 15)
     wb.save(output)
     output.seek(0)
     
