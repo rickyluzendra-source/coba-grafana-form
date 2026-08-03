@@ -38,7 +38,7 @@ async def calculate_export(data: dict):
     ws2.append([
         "='Data Master'!C2*'Data Master'!D2",
         "='Data Master'!C2*'Data Master'!E2",
-        f"=A2*{tax}",
+        f"=A2*{tax}/100",
         "=A2-B2-C2"
     ])
     
