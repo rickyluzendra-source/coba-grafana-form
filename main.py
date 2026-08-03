@@ -72,12 +72,31 @@ async def download_all(payload: dict = None):
     # Baris Total di Paling Bawah
     tot_row = total_rows + 2
     if total_rows > 0:
-        ws_calc.cell(row=tot_row, column=1, value="TOTAL")
-        ws_calc.cell(row=tot_row, column=3, value=f"=SUM(C2:C{tot_row-1})")
-        ws_calc.cell(row=tot_row, column=4, value=f"=SUM(D2:D{tot_row-1})")
-        ws_calc.cell(row=tot_row, column=5, value=f"=SUM(E2:E{tot_row-1})")
-        ws_calc.cell(row=tot_row, column=6, value=f"=SUM(F2:F{tot_row-1})")
-        ws_calc.cell(row=tot_row, column=7, value=f"=AVERAGE(G2:G{tot_row-1})")
+    # 1. Isikan Teks & Rumus
+    cell_label  = ws_calc.cell(row=tot_row, column=1, value="TOTAL")
+    cell_rev    = ws_calc.cell(row=tot_row, column=3, value=f"=SUM(C2:C{tot_row-1})")
+    cell_cost   = ws_calc.cell(row=tot_row, column=4, value=f"=SUM(D2:D{tot_row-1})")
+    cell_tax    = ws_calc.cell(row=tot_row, column=5, value=f"=SUM(E2:E{tot_row-1})")
+    cell_profit = ws_calc.cell(row=tot_row, column=6, value=f"=SUM(F2:F{tot_row-1})")
+    cell_margin = ws_calc.cell(row=tot_row, column=7, value=f"=AVERAGE(G2:G{tot_row-1})")
+
+    # 2. Terapkan Format Angka (Number Formatting) Sama Seperti Baris Atasnya
+    cell_rev.number_format    = '#,##0'  # Format Ribuan (Gross Rev)
+    cell_cost.number_format   = '#,##0'  # Format Ribuan (Total Direct)
+    cell_tax.number_format    = '#,##0'  # Format Ribuan (Tax 11%)
+    cell_profit.number_format = '#,##0'  # Format Ribuan (Net Profit)
+    cell_margin.number_format = '0.0%'   # Format Persentase (Margin %)
+
+    # 3. (Opsional) Buat Baris TOTAL Menjadi Tebal (Bold) Agar Tampak Lebih Rapi
+    from openpyxl.styles import Font
+    bold_font = Font(bold=True)
+    
+    cell_label.font  = bold_font
+    cell_rev.font    = bold_font
+    cell_cost.font   = bold_font
+    cell_tax.font    = bold_font
+    cell_profit.font = bold_font
+    cell_margin.font = bold_font
 
     output = BytesIO()
     wb.save(output)
