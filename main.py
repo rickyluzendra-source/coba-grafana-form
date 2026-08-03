@@ -103,7 +103,7 @@ async def download_all(payload: dict = None):
         cell_profit.font = bold_font
         cell_margin.font = bold_font
 
-    output = BytesIO()
+    
     
     # AUTO-FIT LEBAR KOLOM (MENCEGAH TAMPILAN #####)
     for ws in [ws_master, ws_calc]:
@@ -119,6 +119,7 @@ async def download_all(payload: dict = None):
                     max_len = max(max_len, len(val))
             # Set lebar kolom dengan nilai minimal 15 agar rapi
             ws.column_dimensions[col_letter].width = max(max_len + 3, 15)
+    output = BytesIO()
     wb.save(output)
     output.seek(0)
     
