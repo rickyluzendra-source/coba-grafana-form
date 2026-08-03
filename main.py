@@ -39,7 +39,7 @@ async def calculate_export(data: dict):
         "='Data Master'!C2*'Data Master'!D2",
         "='Data Master'!C2*'Data Master'!E2",
         f"=A2*{tax}/100",
-        "=A2-B2-C2"
+        "=B2-A2-C2"
     ])
     
     output = BytesIO()
