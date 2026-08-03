@@ -5,7 +5,6 @@ from io import BytesIO
 
 app = FastAPI()
 
-# Mengizinkan Grafana Cloud untuk mengakses API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,35 +12,66 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/calculate-export")
-async def calculate_export(data: dict):
-    # Ambil data dari Form Grafana
-    unit = data.get("unit_bisnis", "Branch Utama")
-    kategori = data.get("kategori", "Hardware")
-    volume = float(data.get("volume", 0))
-    harga = float(data.get("harga_unit", 0))
-    biaya = float(data.get("biaya_direct", 0))
-    tax = float(data.get("tax_rate", 0.11))
+# Database sementara di memory server (Menampung semua submit)
+database_penampung = []
 
-    # Buat Workbook Excel
+@app.post("/submit-data")
+async def submit_data(data: dict):
+    """Menampung inputan dari Grafana tanpa langsung download Excel"""
+    database_penampung.append(data)
+    return {
+        "status": "success", 
+        "message": f"Data berhasil disimpan! Total data tersimpan: {len(database_penampung)}"
+    }
+
+@app.post("/download-all")
+async def download_all(payload: dict = None):
+    """Mendownload SELURUH data tersimpan menjadi 1 File Excel"""
     wb = openpyxl.Workbook()
     
-    # Sheet 1: Data Master
-    ws1 = wb.active
-    ws1.title = "Data Master"
-    ws1.append(["Unit Bisnis", "Kategori", "Volume", "Harga/Unit", "Biaya Direct/Unit"])
-    ws1.append([unit, kategori, volume, harga, biaya])
+    # --- SHEET 1: DATA MASTER (Semua Data Submit) ---
+    ws_master = wb.active
+    ws_master.title = "Data Master"
+    ws_master.append(["ID", "Unit Bisnis", "Kategori", "Volume Sales", "Harga/Unit", "Biaya Direct/Unit"])
     
-    # Sheet 2: Hasil Kalkulasi (dengan Rumus Excel)
-    ws2 = wb.create_sheet(title="Hasil Kalkulasi")
-    ws2.append(["Gross Revenue", "Total Direct Cost", "Tax Overhead", "Net Profit"])
-    ws2.append([
-        "='Data Master'!C2*'Data Master'!D2",
-        "='Data Master'!C2*'Data Master'!E2",
-        f"=A2*{tax}/100",
-        "=B2-A2-C2"
-    ])
+    for idx, item in enumerate(database_penampung, start=1):
+        ws_master.append([
+            f"TRX-{idx:03d}",
+            item.get("unit_bisnis", "Branch Utama"),
+            item.get("kategori", "General"),
+            float(item.get("volume", 0)),
+            float(item.get("harga_unit", 0)),
+            float(item.get("biaya_direct", 0))
+        ])
+
+    # --- SHEET 2: HASIL KALKULASI (Rumus Excel untuk Semua Baris) ---
+    ws_calc = wb.create_sheet(title="Hasil Kalkulasi")
+    ws_calc.append(["ID", "Unit Bisnis", "Gross Revenue", "Total Direct Cost", "Tax (11%)", "Net Profit", "Margin %"])
     
+    tax_rate = 0.11
+    total_rows = len(database_penampung)
+    
+    for r in range(2, total_rows + 2):
+        ws_calc.append([
+            f"='Data Master'!A{r}",
+            f"='Data Master'!B{r}",
+            f"='Data Master'!D{r}*'Data Master'!E{r}",  # Revenue
+            f"='Data Master'!D{r}*'Data Master'!F{r}",  # Direct Cost
+            f"=C{r}*{tax_rate}",                       # Tax
+            f"=C{r}-D{r}-E{r}",                        # Net Profit
+            f"=F{r}/C{r}"                               # Margin
+        ])
+        
+    # Baris Total di Paling Bawah
+    tot_row = total_rows + 2
+    if total_rows > 0:
+        ws_calc.cell(row=tot_row, column=1, value="TOTAL")
+        ws_calc.cell(row=tot_row, column=3, value=f"=SUM(C2:C{tot_row-1})")
+        ws_calc.cell(row=tot_row, column=4, value=f"=SUM(D2:D{tot_row-1})")
+        ws_calc.cell(row=tot_row, column=5, value=f"=SUM(E2:E{tot_row-1})")
+        ws_calc.cell(row=tot_row, column=6, value=f"=SUM(F2:F{tot_row-1})")
+        ws_calc.cell(row=tot_row, column=7, value=f"=AVERAGE(G2:G{tot_row-1})")
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -49,5 +79,5 @@ async def calculate_export(data: dict):
     return Response(
         content=output.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=Grafana_Hasil_Kalkulasi.xlsx"}
+        headers={"Content-Disposition": "attachment; filename=Master_Kalkulasi_Rekap_Semua.xlsx"}
     )
